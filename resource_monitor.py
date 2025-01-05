@@ -13,23 +13,31 @@ DISK_THRESHOLD = 80
 
 FROM_EMAIL = "ENTER EMAIL HERE"
 FROM_EMAIL_TOKEN = "ENTER TOKEN HERE"
-
 TO_EMAIL = "ENTER EMAIL HERE"
+
+# Time cooldown in seconds between sending alerts
+EMAIL_COOLDOWN = 30  # 1 minute cooldown
+
+# Initialize the last email sent time
+last_email_time = 0
+last_email_sent_cpu = 0
+last_email_sent_memory = 0
+last_email_sent_disk = 0
 
 
 # Functions to get hardware usage
 def get_cpu_usage():
-    return psutil.cpu_percent(interval=1)  # Return precentage usage of CPU
+    return psutil.cpu_percent(interval=1)  # Return percentage usage of CPU
 
 
 def get_memory_usage():
     memory = psutil.virtual_memory()
-    return memory.percent  # Return precentage usage of RAM
+    return memory.percent  # Return percentage usage of RAM
 
 
 def get_disk_usage():
     disk = psutil.disk_usage("/")
-    return disk.percent  # Return precentage usage of Hard Drive
+    return disk.percent  # Return percentage usage of Hard Drive
 
 
 def get_network_usage():
@@ -41,12 +49,11 @@ def send_email(subject, body, to_email):
     from_email = FROM_EMAIL
     from_password = FROM_EMAIL_TOKEN
 
-    # SMTP config for  Gmail
-
+    # SMTP config for email
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
 
-    # Create email massage
+    # Create email message
     msg = MIMEMultipart()
     msg["From"] = from_email
     msg["To"] = to_email
@@ -56,22 +63,49 @@ def send_email(subject, body, to_email):
     try:
         # Connect to SMTP and send message
         server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Używamy szyfrowania TLS
+        server.starttls()
         server.login(from_email, from_password)
         server.sendmail(from_email, to_email, msg.as_string())
         server.quit()
-        print("Email sent successfully!")
+
+        # Add timestamp to the email sent success message
+        current_time = datetime.now().strftime("%H:%M:%S %d-%m-%Y")
+        print(f"{current_time} Email sent successfully!")
 
     except Exception as e:
         print(f"Error sending email: {e}")
 
 
-def send_alert(resource, threshold):
-    subject = f"ALERT: {resource} usage exceeded threshold"
-    body = f'"ALERT: {resource} usage exceeded the threshold of {threshold}%. \n Please take action!'
+def send_alert(resource, threshold, last_email_time):
+    global last_email_sent_cpu, last_email_sent_memory, last_email_sent_disk
 
-    # Call function to send email
-    send_email(subject, body, TO_EMAIL)
+    # Check if enough time has passed since the last email was sent
+    current_time = time.time()
+
+    subject = f"ALERT: {resource} usage exceeded threshold"
+    body = f"ALERT: {resource} usage exceeded the threshold of {threshold}%. \nPlease take action!"
+
+    current_time = time.time()
+
+    # Save time of last sent email
+    if resource == "CPU":
+        last_email_time = last_email_sent_cpu
+    elif resource == "Memory":
+        last_email_time = last_email_sent_memory
+    elif resource == "Disk":
+        last_email_time = last_email_sent_disk
+
+    # Check if enough time passes to send another email
+    if current_time - last_email_time >= EMAIL_COOLDOWN:
+        send_email(subject, body, TO_EMAIL)
+        if resource == "CPU":
+            last_email_sent_cpu = current_time
+        elif resource == "Memory":
+            last_email_sent_memory = current_time
+        elif resource == "Disk":
+            last_email_sent_disk = current_time
+
+    return last_email_time
 
 
 def monitor_resources(interval, output_file):
@@ -93,13 +127,13 @@ def monitor_resources(interval, output_file):
 
         # Check if any threshold was exceeded
         if cpu > CPU_THRESHOLD:
-            send_alert("CPU", CPU_THRESHOLD)
+            send_alert("CPU", CPU_THRESHOLD, last_email_sent_cpu)
         if memory > MEMORY_THRESHOLD:
-            send_alert("Memory", MEMORY_THRESHOLD)
+            send_alert("Memory", MEMORY_THRESHOLD, last_email_sent_memory)
         if disk > DISK_THRESHOLD:
-            send_alert("Disk", DISK_THRESHOLD)
+            send_alert("Disk", DISK_THRESHOLD, last_email_sent_disk)
 
-        # Check if fiile exists, save data to file
+        # Check if file exists, save data to file
         if not os.path.exists(output_file):
             with open(output_file, "w") as f:
                 json.dump([resource_data], f, indent=4)
