@@ -87,17 +87,10 @@ def send_alert(resource, threshold, last_email_time):
 
     current_time = time.time()
 
-    # Save time of last sent email
-    if resource == "CPU":
-        last_email_time = last_email_sent_cpu
-    elif resource == "Memory":
-        last_email_time = last_email_sent_memory
-    elif resource == "Disk":
-        last_email_time = last_email_sent_disk
-
-    # Check if enough time passes to send another email
     if current_time - last_email_time >= EMAIL_COOLDOWN:
         send_email(subject, body, TO_EMAIL)
+
+        # Update the last email sent time for the resource that triggered the alert
         if resource == "CPU":
             last_email_sent_cpu = current_time
         elif resource == "Memory":
@@ -105,10 +98,14 @@ def send_alert(resource, threshold, last_email_time):
         elif resource == "Disk":
             last_email_sent_disk = current_time
 
-    return last_email_time
+        return current_time  # Return current time to update the last sent time
+
+    return last_email_time  # Return the last email time if cooldown hasn't passed
 
 
 def monitor_resources(interval, output_file):
+    global last_email_sent_cpu, last_email_sent_memory, last_email_sent_disk
+
     while True:
         # Fetching data
         cpu = get_cpu_usage()
@@ -126,12 +123,16 @@ def monitor_resources(interval, output_file):
         }
 
         # Check if any threshold was exceeded
-        if cpu > CPU_THRESHOLD:
-            send_alert("CPU", CPU_THRESHOLD, last_email_sent_cpu)
-        if memory > MEMORY_THRESHOLD:
-            send_alert("Memory", MEMORY_THRESHOLD, last_email_sent_memory)
-        if disk > DISK_THRESHOLD:
-            send_alert("Disk", DISK_THRESHOLD, last_email_sent_disk)
+        if cpu > CPU_THRESHOLD and (time.time() - last_email_sent_cpu >= EMAIL_COOLDOWN):
+            last_email_sent_cpu = send_alert("CPU", CPU_THRESHOLD, last_email_sent_cpu)
+
+        # Check if any threshold was exceeded for Memory
+        if memory > MEMORY_THRESHOLD and (time.time() - last_email_sent_memory >= EMAIL_COOLDOWN):
+            last_email_sent_memory = send_alert("Memory", MEMORY_THRESHOLD, last_email_sent_memory)
+
+        # Check if any threshold was exceeded for Disk
+        if disk > DISK_THRESHOLD and (time.time() - last_email_sent_disk >= EMAIL_COOLDOWN):
+            last_email_sent_disk = send_alert("Disk", DISK_THRESHOLD, last_email_sent_disk)
 
         # Check if file exists, save data to file
         if not os.path.exists(output_file):
