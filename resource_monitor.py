@@ -6,14 +6,16 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from encrypt_credentials import encrypt_file, decrypt_and_load, generate_key
+import socket
 
 CPU_THRESHOLD = 80
 MEMORY_THRESHOLD = 50
 DISK_THRESHOLD = 80
 
-FROM_EMAIL = "ENTER EMAIL HERE"
-FROM_EMAIL_TOKEN = "ENTER TOKEN HERE"
-TO_EMAIL = "ENTER EMAIL HERE"
+FROM_EMAIL = None
+FROM_EMAIL_TOKEN = None
+TO_EMAIL = None
 
 # Time cooldown in seconds between sending alerts
 EMAIL_COOLDOWN = 30  # 1 minute cooldown
@@ -23,6 +25,39 @@ last_email_time = 0
 last_email_sent_cpu = 0
 last_email_sent_memory = 0
 last_email_sent_disk = 0
+
+
+def load_credentials():
+
+    # Credentials input file
+    input_file = "credentials.txt"
+
+    # Encrypted data file
+    encrypted_file = "encrypted_credentials.txt"
+
+    key_file = "secret.key"
+
+    # Check if the key file exists, if not, generate the key
+    if not os.path.exists(key_file):
+        generate_key(key_file)
+        print(f"Key file not found. Key file {key_file} was generated.")
+
+        # Check if file with encrypted credentials exists
+        if not os.path.exists(encrypted_file):
+            # If file doesn't exist encrypt data from input file
+            encrypt_file(input_file, encrypted_file)
+            print(f"File {encrypted_file} not found. Data was encrypted.")
+            print("Script has completed setup, run it once more to continue.")
+            os.sys.exit(1)
+    else:
+        # If file exists decrypt data and load data to global variables
+        from_email, from_email_token, to_email = decrypt_and_load(encrypted_file)
+        global FROM_EMAIL, FROM_EMAIL_TOKEN, TO_EMAIL
+
+        FROM_EMAIL = from_email
+        FROM_EMAIL_TOKEN = from_email_token
+        TO_EMAIL = to_email
+        print(f"Data decrypted: \nFROM_EMAIL: {FROM_EMAIL}\nFROM_EMAIL_TOKEN: {FROM_EMAIL_TOKEN}\nTO_EMAIL: {TO_EMAIL}")
 
 
 # Functions to get hardware usage
@@ -82,8 +117,11 @@ def send_alert(resource, threshold, last_email_time):
     # Check if enough time has passed since the last email was sent
     current_time = time.time()
 
+    # Get the hostname
+    hostname = socket.gethostname()  # Get the name of the machine
+
     subject = f"ALERT: {resource} usage exceeded threshold"
-    body = f"ALERT: {resource} usage exceeded the threshold of {threshold}%. \nPlease take action!"
+    body = f"ALERT: {resource} usage exceeded the threshold of {threshold}%.\nMachine: {hostname}\nPlease take action!"
 
     current_time = time.time()
 
@@ -97,7 +135,6 @@ def send_alert(resource, threshold, last_email_time):
             last_email_sent_memory = current_time
         elif resource == "Disk":
             last_email_sent_disk = current_time
-
         return current_time  # Return current time to update the last sent time
 
     return last_email_time  # Return the last email time if cooldown hasn't passed
@@ -155,4 +192,5 @@ if __name__ == "__main__":
     interval = 10  # Time interval between fetching data (in seconds)
     output_file = "resource_usage.json"  # File, to which data is saved.
 
+    load_credentials()
     monitor_resources(interval, output_file)
