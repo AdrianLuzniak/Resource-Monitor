@@ -57,22 +57,21 @@ def load_credentials():
         FROM_EMAIL = from_email
         FROM_EMAIL_TOKEN = from_email_token
         TO_EMAIL = to_email
-        print(f"Data decrypted: \nFROM_EMAIL: {FROM_EMAIL}\nFROM_EMAIL_TOKEN: {FROM_EMAIL_TOKEN}\nTO_EMAIL: {TO_EMAIL}")
 
 
 # Functions to get hardware usage
 def get_cpu_usage():
-    return psutil.cpu_percent(interval=1)  # Return percentage usage of CPU
+    return psutil.cpu_percent(interval=1)
 
 
 def get_memory_usage():
     memory = psutil.virtual_memory()
-    return memory.percent  # Return percentage usage of RAM
+    return memory.percent
 
 
 def get_disk_usage():
     disk = psutil.disk_usage("/")
-    return disk.percent  # Return percentage usage of Hard Drive
+    return disk.percent
 
 
 def get_network_usage():
@@ -188,9 +187,12 @@ def monitor_resources(interval, output_file):
         time.sleep(interval)
 
 
+def main():
+    load_credentials()
+    monitor_resources(interval, output_file)
+
+
 if __name__ == "__main__":
     interval = 10  # Time interval between fetching data (in seconds)
     output_file = "resource_usage.json"  # File, to which data is saved.
-
-    load_credentials()
-    monitor_resources(interval, output_file)
+    main()

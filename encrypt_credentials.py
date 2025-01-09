@@ -86,9 +86,6 @@ def decrypt_and_load(encrypted_file="encrypted_credentials.txt", key_filename="s
             encrypted_from_email_token = file.readline().strip()
             encrypted_to_email = file.readline().strip()
 
-            print(f"Encrypted from_email: {encrypted_from_email}")
-            print(f"Encrypted from_email_token: {encrypted_from_email_token}")
-            print(f"Encrypted to_email: {encrypted_to_email}")
     except:
         print(f"Error reading file {encrypted_file}: {e}")
         return None, None, None
@@ -98,10 +95,6 @@ def decrypt_and_load(encrypted_file="encrypted_credentials.txt", key_filename="s
         from_email = decrypt_data(encrypted_from_email, key)
         from_email_token = decrypt_data(encrypted_from_email_token, key)
         to_email = decrypt_data(encrypted_to_email, key)
-
-        print(f"Decrypted from_email: {from_email}")
-        print(f"Decrypted from_email_token: {from_email_token}")
-        print(f"Decrypted to_email: {to_email}")
 
     except Exception as e:
         print(f"Error during decryption: {e}")
