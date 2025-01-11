@@ -2,7 +2,6 @@ import os
 from cryptography.fernet import Fernet
 
 
-# Function to generate new key
 def generate_key(key_filename="secret.key"):
     key = Fernet.generate_key()
     with open(key_filename, "wb") as key_file:
@@ -10,13 +9,11 @@ def generate_key(key_filename="secret.key"):
     return key
 
 
-# Function to load key from file
 def load_key(key_filename="secret.key"):
     with open(key_filename, "rb") as key_file:
         return key_file.read()
 
 
-# Function to encrypt data
 def encrypt_data(data, key):
     fernet = Fernet(key)
     encrypted_data = fernet.encrypt(data.encode())
@@ -28,7 +25,6 @@ def encrypt_file(input_file="credentials.txt", output_file="encrypted_credential
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"{input_file} does not exist. Create the file with your credentials.")
 
-    # Load the key
     key = load_key()
 
     # Load data from file
@@ -56,7 +52,6 @@ def encrypt_file(input_file="credentials.txt", output_file="encrypted_credential
         file.write(encrypted_to_email + b"\n")
 
 
-# Function to decrypt data
 def decrypt_data(encrypted_data, key):
     fernet = Fernet(key)
     decrypted_data = fernet.decrypt(encrypted_data).decode("utf-8")
@@ -70,7 +65,7 @@ def decrypt_and_load(encrypted_file="encrypted_credentials.txt", key_filename="s
         print(f"Error loading key: {e}")
         return None, None, None
 
-    # Check if file exist
+    # Check if encrypted file exist
     if not os.path.exists(encrypted_file):
         raise FileNotFoundError(f"{encrypted_file} not found!")
 
@@ -90,7 +85,6 @@ def decrypt_and_load(encrypted_file="encrypted_credentials.txt", key_filename="s
         print(f"Error reading file {encrypted_file}: {e}")
         return None, None, None
 
-    # Decrypt the data
     try:
         from_email = decrypt_data(encrypted_from_email, key)
         from_email_token = decrypt_data(encrypted_from_email_token, key)

@@ -18,7 +18,7 @@ FROM_EMAIL_TOKEN = None
 TO_EMAIL = None
 
 # Time cooldown in seconds between sending alerts
-EMAIL_COOLDOWN = 30  # 1 minute cooldown
+EMAIL_COOLDOWN = 30
 
 # Initialize the last email sent time
 last_email_time = 0
